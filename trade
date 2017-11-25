@@ -1,26 +1,39 @@
 #!/usr/bin/env python3
 import sys
-from coinbase.wallet.client import Client
+from time import time
+from api import init_client
 
+ROUGH_FEE = 0.01468064
 
 def main():
-    with open('etc/.api', 'r') as infile:
-        lines = [line for line in infile]
-    key    = str(lines[0]).strip()
-    secret = str(lines[1]).strip()
 
-    client = Client(key, secret, api_version='2017-10-09')
-    print(client.get_historic_prices(currency_pair='ETH-USD'))
+    client = init_client()
+
+    # Give the program some arbitrary bitcoin threshold
+    threshold = 8100
 
     accountDict = dict()
     accounts = client.get_accounts()
     for account in accounts.data:
-      balance = account.balance
-      print("%s: %s %s" % (account.name, balance.amount, balance.currency))
-      print(account)
       accountDict[account.name] = account
-      #print(account.get_transactions())
 
+    startTime = time()
+    while True:
+        currentTime = time()
+        price = float(client.get_sell_price(currency_pair='BTC-USD')['amount'])
+        print('Elapsed: {}'.format(currentTime - startTime))
+        startTime = currentTime
+        #print('threshold: {}'.format(threshold))
+        #print('price : {}'.format(price))
+        if price < threshold:
+            print('SELLING ALL BITCOIN')
+            sell = client.sell(accountDict['BTC Wallet'].id,
+                               amount=accountDict['BTC Wallet'].balance.amount,
+                               currency='BTC')
+        else:
+            print('Bitcoin is {} above threshold'.format(price - threshold))
+
+    '''
     #buy = client.buy(accountDict['LTC Wallet'].id,
     #amount=".5",
     #currency="LTC")
@@ -32,7 +45,6 @@ def main():
                        currency='LTC')
     print(sell)
 
-    '''
 
     buy = client.buy('2bbf394c-193b-5b2a-9155-3b4732659ede',
                      amount="10",

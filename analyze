@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+
+import exchanges
+print(dir(exchanges))
+from exchanges import CoinDesk
+print(dir(CoinDesk))
+print(CoinDesk.get_current_price(currency='USD'))
+print(CoinDesk.get_current_price())
+print(CoinDesk.get_past_price(date))
+print(CoinDesk.get_historical_data_as_dict(start='2013-09-01', end=None))

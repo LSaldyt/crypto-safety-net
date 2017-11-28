@@ -2,11 +2,15 @@ from coinbase.wallet.client import Client
 
 class CoinbaseClient():
     def __init__(self, filename='etc/.api'):
-
-        with open(filename, 'r') as infile:
-            lines = [line for line in infile]
-        key    = str(lines[0]).strip()
-        secret = str(lines[1]).strip()
+        try:
+            with open(filename, 'r') as infile:
+                lines = [line for line in infile]
+            key    = str(lines[0]).strip()
+            secret = str(lines[1]).strip()
+        except FileNotFoundError:
+            print('Please create a file with coinbase api information at {}'.format(filename))
+            key = None
+            secret = None
 
         self.client = Client(key, secret, api_version='2017-10-09')
 

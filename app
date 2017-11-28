@@ -5,10 +5,13 @@ from notify         import Notifier
 
 
 def main(args):
+    while True:
+        pass
+
+    '''
     coinbaseClient = CoinbaseClient()
     notifyClient   = Notifier()
 
-    '''
     while True:
         print(coinbaseClient.get_sell_price('BTC'))
         print(coinbaseClient.get_sell_price('LTC'))

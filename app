@@ -29,9 +29,9 @@ def show_balances(bittrexClient, notifyClient):
     notifyClient.notify(summary)
 
 def main(args):
-    coinbaseClient = CoinbaseClient()
+    #coinbaseClient = CoinbaseClient()
     bittrexClient  = BittrexClient()
-    notifyClient   = Notifier()
+    #notifyClient   = Notifier()
 
     while True:
         #print(coinbaseClient.get_sell_price('BTC'))

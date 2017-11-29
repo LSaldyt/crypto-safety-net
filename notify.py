@@ -7,14 +7,15 @@ class Notifier:
         assert len(lines) == 4, 'Require four lines in etc/.twilio'
         sid   = lines[0]
         token = lines[1]
-        to    = lines[2]
-        from_ = lines[3]
+
+        self.to    = lines[2]
+        self.from_ = lines[3]
 
         self.client = Client(sid, token)
 
     def notify(self, body):
         self.client.api.account.messages.create(
-            to=toN,
-            from_=fromN,
+            to=self.to,
+            from_=self.from_,
             body=body)
 

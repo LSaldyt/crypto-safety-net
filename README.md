@@ -1,4 +1,6 @@
-# Volatility Surfer
+# Crypto notify
 
-A tiny piece of software that uses a secret trading scheme...
-More will be added soon.
+A simple text notification service using twilio and coinbase/bittrex apis
+Also implements some simple automated trading
+
+Meant to be run on a server, using my other software, backbone.

@@ -34,6 +34,7 @@ def main(args):
     notifyClient   = Notifier()
 
     while True:
+        print('App body..')
         #print(coinbaseClient.get_sell_price('BTC'))
         #print(coinbaseClient.get_sell_price('LTC'))
         #print(dir(bittrexClient))
@@ -42,7 +43,7 @@ def main(args):
         #pprint(bittrexClient.get_markets())
         print(dir(bittrexClient))
         #show_balances(bittrexClient, notifyClient)
-        time.sleep(3600)
+        time.sleep(1)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

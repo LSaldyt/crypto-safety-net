@@ -42,7 +42,7 @@ def main(args):
         #pprint(bittrexClient.get_markets())
         #print(dir(bittrexClient))
         show_balances(bittrexClient, notifyClient)
-        for i in range(600):
+        for i in range(3600):
             print('.', end='')
             time.sleep(1)
 

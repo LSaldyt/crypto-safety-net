@@ -1,2 +1,1 @@
 echo "Installing"
-echo "Test"

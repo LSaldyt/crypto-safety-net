@@ -7,10 +7,14 @@ from lib.brex           import BittrexClient
 from lib.notify         import Notifier
 from lib.crycompare     import Price, History
 
-def show_balances(bittrexClient, notifyClient):
+def notify_percents(bittrexClient, notifyClient):
     btc     = 0
     summary = ''
-    for balance in bittrexClient.get_balances()['result']:
+    balances = bittrexClient.get_balances()['result']
+
+    percents = dict()
+
+    for balance in balances:
         if float(balance['Balance']['Balance']) > 0:
             pprint(balance)
             name     = balance['Currency']['Currency']
@@ -23,8 +27,13 @@ def show_balances(bittrexClient, notifyClient):
                 else:
                     pershare = 0
 
-            btc     += nshares * pershare
-            summary += '{} : {}\n    @{}/share\n'.format(name, nshares, pershare)
+            amount = nshares * pershare
+            percents[name] = amount
+
+            btc     += amount
+            #summary += '{} : {}\n    @{}/share\n'.format(name, nshares, pershare)
+    for k, v in sorted(percents.items(), key=lambda kv : kv[1], reverse=True):
+        summary += '{}: {}%\n'.format(k, round(v / btc * 100, 2))
     summary += 'Total BTC: {}\n'.format(btc)
     notifyClient.notify(summary)
 
@@ -35,18 +44,7 @@ def main(args):
     notifyClient  = Notifier()
 
     while True:
-        #print(coinbaseClient.get_sell_price('BTC'))
-        #print(coinbaseClient.get_sell_price('LTC'))
-        #print(dir(bittrexClient))
-        #pprint(bittrexClient.get_balances()['result'][0])
-        #1/0
-        #pprint(bittrexClient.get_markets())
-        #print(dir(bittrexClient))
-        #print(bittrexClient.get_currencies())
-        #print(bittrexClient.get_market_history('USDT-BTC'))
-        #show_balances(bittrexClient, notifyClient)
-        #print(price.priceHistorical('USD', 'BTC'))
-        print(history.histoDay('BTC', 'USD'))
+        notify_percents(bittrexClient, notifyClient)
         for i in range(3600):
             print('.', end='')
             time.sleep(1)

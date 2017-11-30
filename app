@@ -3,9 +3,9 @@ import time, sys
 
 from pprint import pprint
 
-from lib.coinbaseclient import CoinbaseClient
 from lib.brex           import BittrexClient
 from lib.notify         import Notifier
+from lib.crycompare     import Price, History
 
 def show_balances(bittrexClient, notifyClient):
     btc     = 0
@@ -29,9 +29,10 @@ def show_balances(bittrexClient, notifyClient):
     notifyClient.notify(summary)
 
 def main(args):
-    #coinbaseClient = CoinbaseClient()
-    bittrexClient  = BittrexClient()
-    notifyClient   = Notifier()
+    price         = Price
+    history       = History
+    bittrexClient = BittrexClient()
+    notifyClient  = Notifier()
 
     while True:
         #print(coinbaseClient.get_sell_price('BTC'))
@@ -40,9 +41,12 @@ def main(args):
         #pprint(bittrexClient.get_balances()['result'][0])
         #1/0
         #pprint(bittrexClient.get_markets())
-        print(dir(bittrexClient))
-        print(bittrexClient.get_currencies())
+        #print(dir(bittrexClient))
+        #print(bittrexClient.get_currencies())
+        #print(bittrexClient.get_market_history('USDT-BTC'))
         #show_balances(bittrexClient, notifyClient)
+        #print(price.priceHistorical('USD', 'BTC'))
+        print(history.histoDay('BTC', 'USD'))
         for i in range(3600):
             print('.', end='')
             time.sleep(1)

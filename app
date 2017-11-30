@@ -3,9 +3,9 @@ import time, sys
 
 from pprint import pprint
 
-from coinbaseclient import CoinbaseClient
-from brex           import BittrexClient
-from notify         import Notifier
+from lib.coinbaseclient import CoinbaseClient
+from lib.brex           import BittrexClient
+from lib.notify         import Notifier
 
 def show_balances(bittrexClient, notifyClient):
     btc     = 0
@@ -40,8 +40,9 @@ def main(args):
         #pprint(bittrexClient.get_balances()['result'][0])
         #1/0
         #pprint(bittrexClient.get_markets())
-        #print(dir(bittrexClient))
-        show_balances(bittrexClient, notifyClient)
+        print(dir(bittrexClient))
+        print(bittrexClient.get_currencies())
+        #show_balances(bittrexClient, notifyClient)
         for i in range(3600):
             print('.', end='')
             time.sleep(1)

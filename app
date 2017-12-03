@@ -43,6 +43,18 @@ def update(database, bittrexClient, notifyClient):
         if percent > 1:
             summary += '{}: {}%\n'.format(k, round(percent, 2))
     summary += 'Total BTC: {}\n'.format(btc)
+
+    today     = datetime.datetime.today()
+    yesterday = today - datetime.timedelta(days=1)
+
+    balance = lambda date : sum(map(float, database[date.date()].values() if date.date() in database else []))
+
+    change  = balance(today) - balance(yesterday)
+    pchange = (change / max(balance(today), balance(yesterday))) / 100
+
+    summary += 'Change: {}\n'.format(change)
+    summary += 'P Change: {}%\n'.format(pchange)
+
     notifyClient.notify(summary)
     return database
 
@@ -71,6 +83,7 @@ def main(args):
     try:
         checked = database['checked'] if 'checked' in database else set()
         while True:
+            save_data(database, bittrexClient)
             for message in notifyClient.client.messages.list():
                 if message.direction == 'inbound':
                     sent = message.date_sent
@@ -87,7 +100,6 @@ def main(args):
                             commandTree[command](database, bittrexClient, notifyClient)
                         else:
                             notifyClient.notify('Invalid command: {}'.format(command))
-            save_data(database, bittrexClient)
             print('Waiting', end='')
             for i in range(10):
                 time.sleep(1)

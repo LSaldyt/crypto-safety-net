@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-import datetime, time, sys
+import datetime, time, json, sys, os
 
 from pprint import pprint
 
-from lib.brex           import BittrexClient
-from lib.notify         import Notifier
-from lib.crycompare     import Price, History
+from lib.brex       import BittrexClient
+from lib.notify     import Notifier
+from lib.crycompare import Price, History
 
-def update(bittrexClient, notifyClient):
+def update(database, bittrexClient, notifyClient):
     btc     = 0
     summary = ''
     balances = bittrexClient.get_balances()['result']
@@ -37,6 +37,7 @@ def update(bittrexClient, notifyClient):
             summary += '{}: {}%\n'.format(k, round(percent, 2))
     summary += 'Total BTC: {}\n'.format(btc)
     notifyClient.notify(summary)
+    return database
 
 commandTree = {
     'update' : update
@@ -46,23 +47,32 @@ def main(args):
     bittrexClient = BittrexClient()
     notifyClient  = Notifier()
 
-    checked = set()
-    while True:
-        for message in notifyClient.client.messages.list():
-            if message.direction == 'inbound':
-                sent = message.date_sent
-                now  = datetime.datetime.today()
+    if os.path.isfile('.data.json'):
+        with open('.data.json', 'r') as infile:
+            database = json.load(infile)
+    else:
+        database = dict()
+    try:
+        checked = set()
+        while True:
+            for message in notifyClient.client.messages.list():
+                if message.direction == 'inbound':
+                    sent = message.date_sent
+                    now  = datetime.datetime.today()
 
-                today = sent.day == now.day
-                if today and message.sid not in checked:
-                    checked.add(message.sid)
-                    command = message.body.lower().strip()
-                    if command in commandTree:
-                        commandTree[command](bittrexClient, notifyClient)
-                    else:
-                        notifyClient.notify('Invalid command: {}'.format(command))
-        print('Waiting...')
-        time.sleep(1)
+                    today = sent.day == now.day
+                    if today and message.sid not in checked:
+                        checked.add(message.sid)
+                        command = message.body.lower().strip()
+                        if command in commandTree:
+                            commandTree[command](database, bittrexClient, notifyClient)
+                        else:
+                            notifyClient.notify('Invalid command: {}'.format(command))
+            print('Waiting...')
+            time.sleep(1)
+    finally:
+        with open('.data.json', 'w') as outfile:
+            json.dump(database, outfile)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

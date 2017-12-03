@@ -1,2 +1,3 @@
 etc
 __pycache__
+*.json

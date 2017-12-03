@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+import sys
+
+from lib.crycompare import Price, History
+
+def main(args):
+    price = Price()
+    history = History()
+    print(dir(price))
+    print(dir(history))
+    print(price.price('LTC', 'USD', 'bittrex'))
+    print(price.priceHistorical('LTC', 'USD', 'bittrex'))
+    #print(history.histoDay('USD', 'LTC'))
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

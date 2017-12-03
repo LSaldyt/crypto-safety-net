@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import datetime, time, json, sys, os
+import datetime, pickle, time, sys, os
 
 from pprint import pprint
 
@@ -7,13 +7,8 @@ from lib.brex       import BittrexClient
 from lib.notify     import Notifier
 from lib.crycompare import Price, History
 
-def update(database, bittrexClient, notifyClient):
-    btc     = 0
-    summary = ''
-    balances = bittrexClient.get_balances()['result']
-
+def get_btcmarks(balances, market='BitcoinMarket'):
     btcmarks = dict()
-
     for balance in balances:
         nshares = balance['Balance']['Balance']
         name    = balance['Currency']['Currency']
@@ -21,15 +16,27 @@ def update(database, bittrexClient, notifyClient):
             if name == 'BTC':
                 pershare = 1
             else:
-                if balance['BitcoinMarket'] is not None:
-                    pershare = balance['BitcoinMarket']['Last']
+                if balance[market] is not None:
+                    pershare = balance[market]['Last']
                 else:
                     pershare = 0
 
             amount = nshares * pershare
 
             btcmarks[name] = amount
-            btc += amount
+    return btcmarks
+
+def get_btc_price(balances):
+    for balance in balances:
+        name = balance['Currency']['Currency']
+        if name == 'USDT':
+            return float(balance['FiatMarket']['Last'])
+
+def update(database, bittrexClient, notifyClient):
+    summary = ''
+    balances = bittrexClient.get_balances()['result']
+    btcmarks = get_btcmarks(balances)
+    btc      = sum(btcmarks.values())
 
     for k, v in sorted(btcmarks.items(), key=lambda kv : kv[1], reverse=True):
         percent = v / btc * 100
@@ -43,36 +50,54 @@ commandTree = {
     'update' : update
         }
 
+def save_data(database, bittrexClient):
+    balances = bittrexClient.get_balances()['result']
+    btcmarks = get_btcmarks(balances)
+    btcprice = get_btc_price(balances)
+    usdmarks = {k : v * btcprice for k, v in btcmarks.items()}
+    database[datetime.datetime.today().date()] = usdmarks
+
 def main(args):
     bittrexClient = BittrexClient()
     notifyClient  = Notifier()
 
-    if os.path.isfile('.data.json'):
-        with open('.data.json', 'r') as infile:
-            database = json.load(infile)
+    datafile = '.data.pkl'
+
+    if os.path.isfile(datafile):
+        with open(datafile, 'rb') as infile:
+            database = pickle.load(infile)
     else:
         database = dict()
     try:
-        checked = set()
+        checked = database['checked'] if 'checked' in database else set()
         while True:
             for message in notifyClient.client.messages.list():
                 if message.direction == 'inbound':
                     sent = message.date_sent
                     now  = datetime.datetime.today()
 
-                    today = sent.day == now.day
-                    if today and message.sid not in checked:
+                    today  = sent.day == now.day
+                    hour   = sent.hour - 7 == now.hour or sent.hour + 7 == now.hour
+                    minute = sent.minute == now.minute
+                    if today and hour and minute and message.sid not in checked:
                         checked.add(message.sid)
                         command = message.body.lower().strip()
+                        print('Recieved command: {}'.format(command))
                         if command in commandTree:
                             commandTree[command](database, bittrexClient, notifyClient)
                         else:
                             notifyClient.notify('Invalid command: {}'.format(command))
-            print('Waiting...')
-            time.sleep(1)
+            save_data(database, bittrexClient)
+            print('Waiting', end='')
+            for i in range(10):
+                time.sleep(1)
+                print('.', end='', flush=True)
+            print('')
+            pprint(database)
+        database['checked'] = checked
     finally:
-        with open('.data.json', 'w') as outfile:
-            json.dump(database, outfile)
+        with open(datafile, 'wb') as outfile:
+            pickle.dump(database, outfile)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

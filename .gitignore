@@ -1,3 +1,4 @@
 etc
 __pycache__
 *.json
+*.pkl

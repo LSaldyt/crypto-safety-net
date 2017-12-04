@@ -88,10 +88,9 @@ def main(args):
                 if message.direction == 'inbound':
                     sent = message.date_sent
                     now  = datetime.datetime.today() + datetime.timedelta(hours=7)
-
                     today  = sent.day == now.day
                     hour   = sent.hour == now.hour
-                    minute = sent.minute == now.minute
+                    minute = abs(sent.minute - now.minute) < 2
                     if today and hour and minute and message.sid not in checked:
                         checked.add(message.sid)
                         command = message.body.lower().strip()

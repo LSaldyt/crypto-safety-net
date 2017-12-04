@@ -92,7 +92,7 @@ def main(args):
                     today  = sent.day == now.day
                     hour   = sent.hour - 7 == now.hour or sent.hour + 7 == now.hour
                     minute = sent.minute == now.minute
-                    if today and hour and minute and message.sid not in checked:
+                    if hour and minute and message.sid not in checked:
                         checked.add(message.sid)
                         command = message.body.lower().strip()
                         print('Recieved command: {}'.format(command))

@@ -87,10 +87,10 @@ def main(args):
             for message in notifyClient.client.messages.list():
                 if message.direction == 'inbound':
                     sent = message.date_sent
-                    now  = datetime.datetime.today()
+                    now  = datetime.datetime.today() + datetime.timedelta(hours=7)
 
                     today  = sent.day == now.day
-                    hour   = sent.hour - 7 == now.hour or sent.hour + 7 == now.hour
+                    hour   = sent.hour == now.hour
                     minute = sent.minute == now.minute
                     if today and hour and minute and message.sid not in checked:
                         checked.add(message.sid)

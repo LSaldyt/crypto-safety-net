@@ -44,14 +44,31 @@ def update(database, bittrexClient, notifyClient):
             summary += '{}: {}%\n'.format(k, round(percent, 2))
     summary += 'Total BTC: {}\n'.format(btc)
 
-    today     = datetime.datetime.today()
+    today     = datetime.datetime.today().date()
     yesterday = today - datetime.timedelta(days=1)
 
-    balance = lambda date : sum(map(float, database[date.date()].values() if date.date() in database else []))
+    original = min(database.keys())
 
-    change  = balance(today) - balance(yesterday)
-    pchange = round((change / max(balance(today), balance(yesterday))) * 100, 4)
+    def get_change(date):
+        usdmarks = lambda date : database.get(date, dict())
+        balance = lambda date : sum(map(float, usdmarks(date).values()))
+        change  = balance(today) - balance(date)
+        get_p   = lambda v1, v2 : round(((v1 - v2) / max(v1, v2, 1)) * 100, 4)
+        pchange = get_p(balance(today), balance(date))
 
+        todaydict = usdmarks(today)
+        otherdict = usdmarks(date)
+
+        pdict   = {k : get_p(todaydict[k], otherdict[k]) for k in todaydict.keys()}
+        return change, pchange, pdict
+
+    change, pchange, pdict          = get_change(original)
+    daychange, daypchange, daypdict = get_change(yesterday)
+
+    summary += 'Change: {}\n'.format(pdict)
+    summary += 'Today Change: {}\n'.format(daypdict)
+    summary += 'Today Change: {}\n'.format(daychange)
+    summary += 'Today P Change: {}%\n'.format(daypchange)
     summary += 'Change: {}\n'.format(change)
     summary += 'P Change: {}%\n'.format(pchange)
 
@@ -100,9 +117,8 @@ def main(args):
                         else:
                             notifyClient.notify('Invalid command: {}'.format(command))
             print('Waiting', end='')
-            for i in range(2):
-                time.sleep(1)
-                print('.', end='', flush=True)
+            time.sleep(1)
+            print('.', end='', flush=True)
             print('')
             pprint(database)
         database['checked'] = checked

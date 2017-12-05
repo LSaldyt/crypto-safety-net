@@ -1,45 +1,16 @@
 #!/usr/bin/env python3
 import datetime, pickle, time, sys, os
 
-from pprint import pprint
+from pprint     import pprint
+from contextlib import contextmanager
 
 from lib.brex       import BittrexClient
 from lib.notify     import Notifier
 from lib.crycompare import Price, History
 
-def get_marks(client):
-    balances = bittrexClient.get_balances()['result']
-    btcmarks = get_btcmarks(balances)
-    btcprice = get_btc_price(balances):
-    usdmarks = {k : v * btcprice for k, v in btcmarks.items()}
-    return btcmarks, usdmarks
+from lib.brex       import get_marks
 
-def get_btcmarks(balances, market='BitcoinMarket'):
-    btcmarks = dict()
-    for balance in balances:
-        nshares = balance['Balance']['Balance']
-        name    = balance['Currency']['Currency']
-        if float(nshares) > 0:
-            if name == 'BTC':
-                pershare = 1
-            else:
-                if balance[market] is not None:
-                    pershare = balance[market]['Last']
-                else:
-                    pershare = 0
-
-            amount = nshares * pershare
-
-            btcmarks[name] = amount
-    return btcmarks
-
-def get_btc_price(balances):
-    for balance in balances:
-        name = balance['Currency']['Currency']
-        if name == 'USDT':
-            return float(balance['FiatMarket']['Last'])
-
-def update(database, bittrexClient, notifyClient):
+def dist_summary(bittrexClient):
     summary = ''
     btcmarks, usdmarks = get_marks(bittrexClient)
     btc = sum(btcmarks.values())
@@ -49,13 +20,14 @@ def update(database, bittrexClient, notifyClient):
         if percent > 1:
             summary += '{}: {}%\n'.format(k, round(percent, 2))
     summary += 'Total BTC: {}\n'.format(btc)
+    summary += 'Total USD: {}\n'.format(sum(usdmarks.values()))
+    return summary
 
-    today     = datetime.datetime.today().date()
-    yesterday = today - datetime.timedelta(days=1)
+def update(database, bittrexClient, notifyClient):
+    summary = dist_summary(bittrexClient)
+    today = datetime.datetime.today().date()
 
-    original = min(database.keys())
-
-    def get_change(date):
+    def update_change(date):
         get_usdmarks = lambda date : database.get(date, dict())
         balance = lambda date : sum(map(float, usdmarks(date).values()))
         change  = balance(today) - balance(date)
@@ -66,17 +38,26 @@ def update(database, bittrexClient, notifyClient):
         otherdict = get_usdmarks(date)
 
         pdict   = {k : get_p(todaydict[k], otherdict[k]) for k in todaydict.keys()}
-        return change, pchange, pdict
 
-    change, pchange, pdict          = get_change(original)
-    daychange, daypchange, daypdict = get_change(yesterday)
+        summary += 'Change: {}%\n'.format(pchange)
+        summary += 'Change: {}\n'.format(change)
+        #summary += 'Change: {}\n'.format(pdict)
 
-    summary += 'Change: {}\n'.format(pdict)
-    summary += 'Today Change: {}\n'.format(daypdict)
-    summary += 'Today Change: {}\n'.format(daychange)
-    summary += 'Today P Change: {}%\n'.format(daypchange)
-    summary += 'Change: {}\n'.format(change)
-    summary += 'P Change: {}%\n'.format(pchange)
+    def update_since(**kwargs):
+        since = today - datetime.timedelta(**kwargs)
+        summary += 'Since {}'.format(since)
+        update_change(since)
+
+    update_since(days=1)
+    update_since(days=7)
+    update_since(months=1)
+    update_since(months=3)
+    update_since(months=6)
+    update_since(years=1)
+
+    original  = min(database.keys())
+    summary += 'All time:\n'
+    update_change(original)
 
     notifyClient.notify(summary)
     return database
@@ -84,6 +65,29 @@ def update(database, bittrexClient, notifyClient):
 commandTree = {
     'update' : update
         }
+
+@contextmanager
+def retrieve(database, name, default):
+    element = database.get(name, default)
+    yield element
+    database[name] = element
+
+def respond(database, bittrexClient, notifyClient):
+    for message in notifyClient.client.messages.list():
+        if message.direction == 'inbound':
+            sent = message.date_sent
+            now  = datetime.datetime.utcnow()
+            today  = sent.day == now.day
+            hour   = sent.hour == now.hour
+            minute = abs(sent.minute - now.minute) < 2
+            if today and hour and minute and message.sid not in checked:
+                checked.add(message.sid)
+                command = message.body.strip().lower()
+                print('Recieved command: {}'.format(command))
+                if command in commandTree:
+                    commandTree[command](database, bittrexClient, notifyClient)
+                else:
+                    notifyClient.notify('Invalid command: {}'.format(command))
 
 def save_data(database, bittrexClient):
     btcmarks, usdmarks = get_marks(bittrexClient)
@@ -101,30 +105,13 @@ def main(args):
     else:
         database = dict()
     try:
-        checked = database['checked'] if 'checked' in database else set()
-        while True:
-            save_data(database, bittrexClient)
-            for message in notifyClient.client.messages.list():
-                if message.direction == 'inbound':
-                    sent = message.date_sent
-                    now  = datetime.datetime.utcnow()
-                    today  = sent.day == now.day
-                    hour   = sent.hour == now.hour
-                    minute = abs(sent.minute - now.minute) < 2
-                    if today and hour and minute and message.sid not in checked:
-                        checked.add(message.sid)
-                        command = message.body.strip().lower()
-                        print('Recieved command: {}'.format(command))
-                        if command in commandTree:
-                            commandTree[command](database, bittrexClient, notifyClient)
-                        else:
-                            notifyClient.notify('Invalid command: {}'.format(command))
-            print('Waiting', end='')
-            time.sleep(1)
-            print('.', end='', flush=True)
-            print('')
-            #pprint(database)
-        database['checked'] = checked
+        print('Waiting...', end='', flush=True)
+        with retrieve(database, 'checked', set()) as checked:
+            while True:
+                save_data(database, bittrexClient)
+                respond(database, bittrexClient, notifyClient)
+                time.sleep(1)
+                print('.', end='', flush=True)
     finally:
         with open(datafile, 'wb') as outfile:
             pickle.dump(database, outfile)

@@ -88,8 +88,6 @@ def main(args):
                 if message.direction == 'inbound':
                     sent = message.date_sent
                     now  = datetime.datetime.utcnow()
-                    print(now)
-                    #now  = datetime.datetime.today() + datetime.timedelta(hours=7)
                     today  = sent.day == now.day
                     hour   = sent.hour == now.hour
                     minute = abs(sent.minute - now.minute) < 2

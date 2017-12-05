@@ -50,7 +50,7 @@ def update(database, bittrexClient, notifyClient):
     balance = lambda date : sum(map(float, database[date.date()].values() if date.date() in database else []))
 
     change  = balance(today) - balance(yesterday)
-    pchange = (change / max(balance(today), balance(yesterday))) / 100
+    pchange = round((change / max(balance(today), balance(yesterday))) * 100, 4)
 
     summary += 'Change: {}\n'.format(change)
     summary += 'P Change: {}%\n'.format(pchange)

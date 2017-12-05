@@ -87,7 +87,9 @@ def main(args):
             for message in notifyClient.client.messages.list():
                 if message.direction == 'inbound':
                     sent = message.date_sent
-                    now  = datetime.datetime.today() + datetime.timedelta(hours=7)
+                    now  = datetime.datetime.utcnow()
+                    print(now)
+                    #now  = datetime.datetime.today() + datetime.timedelta(hours=7)
                     today  = sent.day == now.day
                     hour   = sent.hour == now.hour
                     minute = abs(sent.minute - now.minute) < 2
@@ -100,7 +102,7 @@ def main(args):
                         else:
                             notifyClient.notify('Invalid command: {}'.format(command))
             print('Waiting', end='')
-            for i in range(10):
+            for i in range(2):
                 time.sleep(1)
                 print('.', end='', flush=True)
             print('')

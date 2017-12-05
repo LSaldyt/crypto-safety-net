@@ -23,41 +23,45 @@ def dist_summary(bittrexClient):
     summary += 'Total USD: {}\n'.format(sum(usdmarks.values()))
     return summary
 
-def update(database, bittrexClient, notifyClient):
-    summary = dist_summary(bittrexClient)
+def update_change(date, database):
     today = datetime.datetime.today().date()
+    summary = ''
+    get_usdmarks = lambda date : database.get(date, dict())
+    balance = lambda date : sum(map(float, get_usdmarks(date).values()))
+    change  = balance(today) - balance(date)
+    get_p   = lambda v1, v2 : round(((v1 - v2) / max(v1, v2, 1)) * 100, 4)
+    pchange = get_p(balance(today), balance(date))
 
-    def update_change(date):
-        get_usdmarks = lambda date : database.get(date, dict())
-        balance = lambda date : sum(map(float, usdmarks(date).values()))
-        change  = balance(today) - balance(date)
-        get_p   = lambda v1, v2 : round(((v1 - v2) / max(v1, v2, 1)) * 100, 4)
-        pchange = get_p(balance(today), balance(date))
+    todaydict = get_usdmarks(today)
+    otherdict = get_usdmarks(date)
 
-        todaydict = get_usdmarks(today)
-        otherdict = get_usdmarks(date)
+    pdict   = {k : get_p(todaydict.get(k, 0), otherdict.get(k, 0)) for k in todaydict.keys()}
 
-        pdict   = {k : get_p(todaydict[k], otherdict[k]) for k in todaydict.keys()}
+    summary += 'Change: {}%\n'.format(pchange)
+    summary += 'Change: {}\n'.format(change)
+    return summary
 
-        summary += 'Change: {}%\n'.format(pchange)
-        summary += 'Change: {}\n'.format(change)
-        #summary += 'Change: {}\n'.format(pdict)
+def update_since(database, **kwargs):
+    today = datetime.datetime.today().date()
+    summary = ''
+    since = today - datetime.timedelta(**kwargs)
+    summary += 'Since {}'.format(since)
+    summary += update_change(since, database)
+    return summary
 
-    def update_since(**kwargs):
-        since = today - datetime.timedelta(**kwargs)
-        summary += 'Since {}'.format(since)
-        update_change(since)
-
-    update_since(days=1)
-    update_since(days=7)
-    update_since(months=1)
-    update_since(months=3)
-    update_since(months=6)
-    update_since(years=1)
+def update(database, bittrexClient, notifyClient):
+    summary = ''
+    summary += dist_summary(bittrexClient)
+    summary += update_since(database, days=1)
+    summary += update_since(database, days=7)
+    #summary += update_since(database, months=1)
+    #summary += update_since(database, months=3)
+    #summary += update_since(database, months=6)
+    #summary += update_since(database, years=1)
 
     original  = min(database.keys())
     summary += 'All time:\n'
-    update_change(original)
+    update_change(original, database)
 
     notifyClient.notify(summary)
     return database
@@ -72,7 +76,7 @@ def retrieve(database, name, default):
     yield element
     database[name] = element
 
-def respond(database, bittrexClient, notifyClient):
+def respond(database, bittrexClient, notifyClient, checked):
     for message in notifyClient.client.messages.list():
         if message.direction == 'inbound':
             sent = message.date_sent
@@ -109,7 +113,7 @@ def main(args):
         with retrieve(database, 'checked', set()) as checked:
             while True:
                 save_data(database, bittrexClient)
-                respond(database, bittrexClient, notifyClient)
+                respond(database, bittrexClient, notifyClient, checked)
                 time.sleep(1)
                 print('.', end='', flush=True)
     finally:

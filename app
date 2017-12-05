@@ -7,6 +7,13 @@ from lib.brex       import BittrexClient
 from lib.notify     import Notifier
 from lib.crycompare import Price, History
 
+def get_marks(client):
+    balances = bittrexClient.get_balances()['result']
+    btcmarks = get_btcmarks(balances)
+    btcprice = get_btc_price(balances):
+    usdmarks = {k : v * btcprice for k, v in btcmarks.items()}
+    return btcmarks, usdmarks
+
 def get_btcmarks(balances, market='BitcoinMarket'):
     btcmarks = dict()
     for balance in balances:
@@ -34,9 +41,8 @@ def get_btc_price(balances):
 
 def update(database, bittrexClient, notifyClient):
     summary = ''
-    balances = bittrexClient.get_balances()['result']
-    btcmarks = get_btcmarks(balances)
-    btc      = sum(btcmarks.values())
+    btcmarks, usdmarks = get_marks(bittrexClient)
+    btc = sum(btcmarks.values())
 
     for k, v in sorted(btcmarks.items(), key=lambda kv : kv[1], reverse=True):
         percent = v / btc * 100
@@ -50,14 +56,14 @@ def update(database, bittrexClient, notifyClient):
     original = min(database.keys())
 
     def get_change(date):
-        usdmarks = lambda date : database.get(date, dict())
+        get_usdmarks = lambda date : database.get(date, dict())
         balance = lambda date : sum(map(float, usdmarks(date).values()))
         change  = balance(today) - balance(date)
         get_p   = lambda v1, v2 : round(((v1 - v2) / max(v1, v2, 1)) * 100, 4)
         pchange = get_p(balance(today), balance(date))
 
-        todaydict = usdmarks(today)
-        otherdict = usdmarks(date)
+        todaydict = get_usdmarks(today)
+        otherdict = get_usdmarks(date)
 
         pdict   = {k : get_p(todaydict[k], otherdict[k]) for k in todaydict.keys()}
         return change, pchange, pdict
@@ -80,10 +86,7 @@ commandTree = {
         }
 
 def save_data(database, bittrexClient):
-    balances = bittrexClient.get_balances()['result']
-    btcmarks = get_btcmarks(balances)
-    btcprice = get_btc_price(balances)
-    usdmarks = {k : v * btcprice for k, v in btcmarks.items()}
+    btcmarks, usdmarks = get_marks(bittrexClient)
     database[datetime.datetime.today().date()] = usdmarks
 
 def main(args):
@@ -110,7 +113,7 @@ def main(args):
                     minute = abs(sent.minute - now.minute) < 2
                     if today and hour and minute and message.sid not in checked:
                         checked.add(message.sid)
-                        command = message.body.lower().strip()
+                        command = message.body.strip().lower()
                         print('Recieved command: {}'.format(command))
                         if command in commandTree:
                             commandTree[command](database, bittrexClient, notifyClient)
@@ -120,7 +123,7 @@ def main(args):
             time.sleep(1)
             print('.', end='', flush=True)
             print('')
-            pprint(database)
+            #pprint(database)
         database['checked'] = checked
     finally:
         with open(datafile, 'wb') as outfile:

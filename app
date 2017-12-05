@@ -87,12 +87,11 @@ def main(args):
             for message in notifyClient.client.messages.list():
                 if message.direction == 'inbound':
                     sent = message.date_sent
-                    now  = datetime.datetime.today()
-
+                    now  = datetime.datetime.utcnow()
                     today  = sent.day == now.day
-                    hour   = sent.hour - 7 == now.hour or sent.hour + 7 == now.hour
-                    minute = sent.minute == now.minute
-                    if hour and minute and message.sid not in checked:
+                    hour   = sent.hour == now.hour
+                    minute = abs(sent.minute - now.minute) < 2
+                    if today and hour and minute and message.sid not in checked:
                         checked.add(message.sid)
                         command = message.body.lower().strip()
                         print('Recieved command: {}'.format(command))
@@ -101,7 +100,7 @@ def main(args):
                         else:
                             notifyClient.notify('Invalid command: {}'.format(command))
             print('Waiting', end='')
-            for i in range(10):
+            for i in range(2):
                 time.sleep(1)
                 print('.', end='', flush=True)
             print('')

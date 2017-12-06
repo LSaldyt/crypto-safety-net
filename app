@@ -67,6 +67,11 @@ def update(database, notifyClient):
     notifyClient.notify(summary)
     return database
 
+def save_data(database):
+    client = BittrexClient()
+    bitmarks, usdmarks = get_marks(client)
+    database['usdmarks'][datetime.datetime.today().date()] = usdmarks
+
 if __name__ == '__main__':
-    cord = Cord(dict(update=update))
+    cord = Cord(dict(update=update), save_data)
     cord.loop()

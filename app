@@ -70,6 +70,8 @@ def update(database, notifyClient):
 def save_data(database):
     client = BittrexClient()
     bitmarks, usdmarks = get_marks(client)
+    if 'usdmarks' not in database:
+        database['usdmarks'] = dict()
     database['usdmarks'][datetime.datetime.today().date()] = usdmarks
 
 if __name__ == '__main__':

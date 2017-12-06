@@ -37,15 +37,15 @@ def update_change(date, database):
 
     pdict   = {k : get_p(todaydict.get(k, 0), otherdict.get(k, 0)) for k in todaydict.keys()}
 
-    summary += 'Change: {}%\n'.format(pchange)
-    summary += 'Change: {}\n'.format(change)
+    summary += 'Change: {}%\n'.format(round(pchange, 4))
+    summary += 'Change: {}\n'.format(round(change, 4))
     return summary
 
 def update_since(database, **kwargs):
     today = datetime.datetime.today().date()
     summary = ''
     since = today - datetime.timedelta(**kwargs)
-    summary += 'Since {}'.format(since)
+    summary += 'Since {}\n:'.format(since)
     summary += update_change(since, database)
     return summary
 
@@ -54,14 +54,10 @@ def update(database, bittrexClient, notifyClient):
     summary += dist_summary(bittrexClient)
     summary += update_since(database, days=1)
     summary += update_since(database, days=7)
-    #summary += update_since(database, months=1)
-    #summary += update_since(database, months=3)
-    #summary += update_since(database, months=6)
-    #summary += update_since(database, years=1)
 
     original  = min(database.keys())
     summary += 'All time:\n'
-    update_change(original, database)
+    summary += update_change(original, database)
 
     notifyClient.notify(summary)
     return database

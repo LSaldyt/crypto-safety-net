@@ -45,7 +45,7 @@ def update_since(database, **kwargs):
     today = datetime.datetime.today().date()
     summary = ''
     since = today - datetime.timedelta(**kwargs)
-    summary += 'Since {}\n:'.format(since)
+    summary += 'Since {}:\n'.format(since)
     summary += update_change(since, database)
     return summary
 

@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+import pickle, sys
+
+def main(args):
+    with open('.data.pkl', 'rb') as infile:
+        data = pickle.load(infile)
+    new_data = dict()
+    new_data['usdmarks'] = dict()
+    new_data['usdmarks'] = data
+    checked = data['checked']
+    del new_data['usdmarks']['checked']
+    new_data['checked'] = checked
+    with open('.data.pkl', 'wb') as outfile:
+        pickle.dump(new_data, outfile)
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

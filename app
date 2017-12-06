@@ -73,5 +73,5 @@ def save_data(database):
     database['usdmarks'][datetime.datetime.today().date()] = usdmarks
 
 if __name__ == '__main__':
-    cord = Cord(dict(update=update), save_data)
+    cord = Cord(dict(update=update), save_data, lambda: print('Cryptometric..'))
     cord.loop()

@@ -1,3 +1,5 @@
+from pprint import pprint
+
 def get_marks(client):
     balances = client.get_balances()['result']
     btcmarks = get_btcmarks(balances)
@@ -5,11 +7,12 @@ def get_marks(client):
     usdmarks = {k : v * btcprice for k, v in btcmarks.items()}
     return btcmarks, usdmarks
 
-def get_btcmarks(balances, market='BitcoinMarket'):
+def get_btcmarks(balances):
+    pprint(balances)
     btcmarks = dict()
     for balance in balances:
-        nshares = balance['Balance']['Balance']
-        name    = balance['Currency']['Currency']
+        nshares = balance['Balance']
+        name    = balance['Currency']
         if float(nshares) > 0:
             if name == 'BTC':
                 pershare = 1

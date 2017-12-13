@@ -4,36 +4,37 @@ import datetime, pickle, time, sys, os
 from pprint     import pprint
 from contextlib import contextmanager
 
-from lib.brex       import BittrexClient, get_marks
-from lib.notify     import Notifier
-from lib.crycompare import Price, History
+from lib.brex           import BittrexClient 
+from lib.get            import get_usd_marks
+from lib.notify         import Notifier
+from lib.crycompare     import Price, History
+from lib.coinbaseclient import CoinbaseClient
 
 from cord import Cord
 
-def dist_summary(bittrexClient):
+def dist_summary(brex, cbase):
     summary = ''
-    btcmarks, usdmarks = get_marks(bittrexClient)
-    btc = sum(btcmarks.values())
+    usdmarks = get_usd_marks(brex, cbase)
+    total = sum(usdmarks.values())
 
-    for k, v in sorted(btcmarks.items(), key=lambda kv : kv[1], reverse=True):
-        percent = v / btc * 100
+    for k, v in sorted(usdmarks.items(), key=lambda kv : kv[1], reverse=True):
+        percent = v / total * 100
         if percent > 1:
             summary += '{}: {}%\n'.format(k, round(percent, 2))
-    summary += 'Total BTC: {}\n'.format(btc)
-    summary += 'Total USD: {}\n'.format(sum(usdmarks.values()))
+    summary += 'Total USD: {}\n'.format(total)
     return summary
 
 def update_change(date, database):
     today = datetime.datetime.today().date()
     summary = ''
-    get_usdmarks = lambda date : database.get(date, dict())
-    balance = lambda date : sum(map(float, get_usdmarks(date).values()))
+    get_db_usdmarks = lambda date : database.get(date, dict())
+    balance = lambda date : sum(map(float, get_db_usdmarks(date).values()))
     change  = balance(today) - balance(date)
     get_p   = lambda v1, v2 : round(((v1 - v2) / max(v1, v2, 1)) * 100, 4)
     pchange = get_p(balance(today), balance(date))
 
-    todaydict = get_usdmarks(today)
-    otherdict = get_usdmarks(date)
+    todaydict = get_db_usdmarks(today)
+    otherdict = get_db_usdmarks(date)
 
     pdict   = {k : get_p(todaydict.get(k, 0), otherdict.get(k, 0)) for k in todaydict.keys()}
 
@@ -51,10 +52,11 @@ def update_since(database, **kwargs):
 
 def update(database, notifyClient):
     usdmarks = database.get('usdmarks', dict())
-    bittrexClient = BittrexClient()
+    brex = BittrexClient()
+    cbase = CoinbaseClient()
 
     summary = ''
-    summary += dist_summary(bittrexClient)
+    summary += dist_summary(brex, cbase)
     summary += update_since(usdmarks, days=1)
     summary += update_since(usdmarks, days=7)
 
@@ -68,8 +70,9 @@ def update(database, notifyClient):
     return database
 
 def save_data(database):
-    client = BittrexClient()
-    bitmarks, usdmarks = get_marks(client)
+    cbase = CoinbaseClient()
+    brex  = BittrexClient()
+    usdmarks = get_usd_marks(brex, cbase)
     if 'usdmarks' not in database:
         database['usdmarks'] = dict()
     database['usdmarks'][datetime.datetime.today().date()] = usdmarks

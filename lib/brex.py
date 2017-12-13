@@ -1,5 +1,4 @@
 from bittrex import Bittrex
-from .get import *
 
 def BittrexClient(filename='etc/.brex'):
     with open(filename, 'r') as infile:

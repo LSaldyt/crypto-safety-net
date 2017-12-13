@@ -13,11 +13,16 @@ class CoinbaseClient():
             secret = None
 
         self.client = Client(key, secret, api_version='2017-10-09')
-
         self.accountDict = dict()
+        self.update()
+
+    def update(self):
         accounts = self.client.get_accounts()
         for account in accounts.data:
           self.accountDict[account.name] = account
+
+    def last(self, pair):
+        return float(self.client.get_spot_price(currency_pair=pair)['amount'])
 
     def get_sell_price(self, pair):
         return float(self.client.get_sell_price(currency_pair=pair)['amount'])
